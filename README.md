@@ -1,0 +1,1 @@
+# anki-simple-mandarin-ruby
