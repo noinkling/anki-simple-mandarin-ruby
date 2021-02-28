@@ -1,0 +1,4 @@
+target = "src/_vendor"
+packages = [
+    "pypinyin",
+]
