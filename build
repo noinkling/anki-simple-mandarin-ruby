@@ -1,3 +1,54 @@
 #!/bin/sh
+# /usr/bin/env bash
 
-python-vendorize
+set -e
+
+# The version of Python that our lowest supported version of Anki uses:
+export PIP_PYTHON_VERSION="3.8"
+
+# Use non-binary version of packages (if there is a choice), since Anki supports multiple platforms:
+#export PIP_NO_BINARY=":all:"
+
+# Use a platform-agnostic "wheel" (distribution archive) if one exists, since Anki
+# supports multiple platforms. This usually means that the package is pure Python.
+# Will fall back to source distribution otherwise (if available), in which case it
+# probably won't work cross-platform.
+export PIP_PLATFORM=any
+#export PIP_ABI=none
+
+# Stops __pycache__ folders / .pyc files being generated on install.
+# For some reason this environment variable needs to be set to 0 to activate the option...
+# See: https://pip.pypa.io/en/stable/user_guide/#config-file
+export PIP_NO_COMPILE=0
+# Stops __pycache__ folders / .pyc files being generated on import.
+export PYTHONDONTWRITEBYTECODE=1
+
+echo "Vendorizing dependencies..."
+echo
+
+(set -x; python-vendorize) || {
+  errcode=$?
+  echo >&2
+  echo 'Run `python -m pip install -r requirements-dev.txt`' >&2
+  echo "or activate your virtual environment if you forgot to, and try again." >&2
+  exit $errcode
+}
+(set -x; rm -r ./src/_vendor/bin)
+
+echo
+echo "Downloading (better) pinyin dictionary and converting it..."
+echo
+
+(
+set -x
+curl --create-dirs -o data/large_pinyin.txt https://raw.githubusercontent.com/mozillazg/phrase-pinyin-data/master/large_pinyin.txt
+# Hacky way to prevent the echo command itself being output with set -x:
+{ echo; } 2> /dev/null
+curl -O https://raw.githubusercontent.com/mozillazg/python-pinyin/master/gen_phrases_dict.py
+{ echo; } 2> /dev/null
+python -X utf8 gen_phrases_dict.py data/large_pinyin.txt data/phrases_dict_large.py
+python -X utf8 tidy_phrases_dict.py data/phrases_dict_large.py src/data/custom_phrases_dict.py
+)
+
+echo
+echo "Done."

@@ -1,4 +1,4 @@
 target = "src/_vendor"
 packages = [
-    "pypinyin",
+    "pypinyin~=0.41.0",
 ]
